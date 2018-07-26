@@ -16,15 +16,8 @@ process.argv.forEach((val) => {
 });
 
 setInterval(() => {
-  try
-  {
-    if (main.Globals.Runable == true)
-      main.Run(); 
-  }
-  catch (error) {
-    if (Globals.envMode === Globals.env.Local)
-      console.log("não rolou rodar o main.Run(): ", error);
-  }
+  if (main.Globals.Runable == true)
+    main.Run(); 
 }, updateInterval);
 
 app.use(express.static('www'));

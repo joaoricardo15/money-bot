@@ -76,8 +76,8 @@ module.exports.executeTriggers = async function (user)
                   if (order["unit_price"] !== bestBuyOffer || (order["unit_price"] === bestBuyOffer && available_amount > 0))
                   {
                     //cancels the selling order placed
-                    //await api.CancelOrder(user.token, order["id"]);
-                    console.log("buying order should be canceled: "+currency.currency_code+" , id: "+order["id"]);
+                    await api.CancelOrder(user.token, order["id"]);
+                    //console.log("buying order should be canceled: "+currency.currency_code+" , id: "+order["id"]);
                     newBalanceNeeded = true;
                   }
                 }
@@ -103,8 +103,8 @@ module.exports.executeTriggers = async function (user)
               let currencyCode = result["currencyCode"];
               let currencyBuyingValue = result["buyingValue"];
               let currencyAmount = logic.ConvertMoneyToCurrency(currencyAmountToBeTraded, currencyBuyingValue);
-              // await api.CreateOrder(user.token, currencyCode, currencyAmount, "buy", currencyBuyingValue);
-              console.log("buying order should be placed: "+currencyCode+" , qtd: "+currencyAmount+" preco: "+currencyBuyingValue);
+              await api.CreateOrder(user.token, currencyCode, currencyAmount, "buy", currencyBuyingValue);
+              //console.log("buying order should be placed: "+currencyCode+" , qtd: "+currencyAmount+" preco: "+currencyBuyingValue);
             }
           }
         }
@@ -128,8 +128,8 @@ module.exports.executeTriggers = async function (user)
                 if (order["unit_price"] !== bestSellOffer || (order["unit_price"] === bestSellOffer && available_amount > 0))
                 {
                   //cancels the selling order placed
-                  //await api.CancelOrder(user.token, order["id"]);
-                  console.log("selling order should be canceled: "+currency_code+" , id: "+order["id"]);
+                  await api.CancelOrder(user.token, order["id"]);
+                  //console.log("selling order should be canceled: "+currency_code+" , id: "+order["id"]);
                   newBalanceNeeded = true;
                 }
               }
@@ -157,8 +157,8 @@ module.exports.executeTriggers = async function (user)
                   /////////////////////////////////////////////////
                   // ----------- place selling order ----------- //
                   /////////////////////////////////////////////////
-                  // await api.CreateOrder(user.token, currencyCode, currencyAmountToBeTraded, "sell", sellingPrice);
-                  console.log("selling order that should be placed: "+currency_code+" , qtd: "+currencyAmountToBeTraded+" preco: "+sellingPrice);
+                  await api.CreateOrder(user.token, currencyCode, currencyAmountToBeTraded, "sell", sellingPrice);
+                  //console.log("selling order that should be placed: "+currency_code+" , qtd: "+currencyAmountToBeTraded+" preco: "+sellingPrice);
                 }
               }
             }

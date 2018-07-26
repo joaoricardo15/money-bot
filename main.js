@@ -16,17 +16,12 @@ module.exports.Run = async function()
   try {
     for(user of crm.users)
     { 
-      //let currencies = await logicFlow.updateTriggers(user); 
-      //if(currencies !== null)
-      {
-        //user.currencies = currencies;
-        await logicFlow.executeTriggers(user); 
-      }
+      //user.currencies = await logicFlow.updateTriggers(user); 
+      await logicFlow.executeTriggers(user); 
     }
-  } 
-  catch(error) {
+  } catch(error) {
     if (server.Globals.envMode === server.Globals.env.Local)
-      console.log("error: ",error);
+      console.log(new Date()+"\nerror: "+error);
   }
 
   waitNextCycle(initialTime);
