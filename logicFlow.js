@@ -49,13 +49,13 @@ module.exports.executeTriggers = async function (user)
       else
       {
         let ticker = await api.GetTiker(user.token, currency.currency_code);
-        let userOrders = await api.GetUserOrders(user.token, currency.currency_code, "waiting");
         let trades = await api.GetTrades(user.token, currency.currency_code, Locals.numberOfTradesForSellTriggers);
+        let userOrders = await api.GetUserOrders(user.token, currency.currency_code, "waiting");
         let userCurrency = user.currencies.find(x => x.currency_code === currency.currency_code);
         // check if this currency from balance has reference on user's settings
         if (userCurrency)
         {
-          executeSellingTrigger(user.token, currency, currency.currency_code, ticker, userOrders["orders"], trades["trades"], userCurrency.triggers.sell);
+          await executeSellingTrigger(user.token, currency, ticker, userOrders["orders"], trades["trades"], userCurrency.triggers.sell);
           buyingData.currencies.push({currency_code: currency.currency_code, ticker: ticker, userOrders: userOrders["orders"], trigger: userCurrency.triggers.buy});
         }
       }
@@ -70,25 +70,85 @@ module.exports.executeTriggers = async function (user)
 
 async function executeBuyingTrigger(token, buyingData)
 {
-  let locked_amount = buyingData.balance["locked_amount"];
-  let available_amount = buyingData.balance["available_amount"];
-  // check if there are resources of this currency
-  if (available_amount > 0 || locked_amount > 0)
+  try
   {
-    let currencyAmountToBeTraded = available_amount;
-
-    if (locked_amount >= Locals.minimumTradeMoneyAmount)
+    let locked_amount = buyingData.balance["locked_amount"];
+    let available_amount = buyingData.balance["available_amount"];
+    // check if there are resources of this currency
+    if (available_amount > 0 || locked_amount > 0)
     {
-      let newBalanceNeeded = false;
-      for (currency of buyingData.currencies)
+      let currencyAmountToBeTraded = available_amount;
+
+      if (locked_amount >= Locals.minimumTradeMoneyAmount)
       {
-        let bestBuyOffer = currency.ticker["buy"];s
-        for (order of currency.userOrders)
+        let newBalanceNeeded = false;
+        for (currency of buyingData.currencies)
         {
-          if (order["type"] === "buy")
+          let bestBuyOffer = currency.ticker["buy"];s
+          for (order of currency.userOrders)
+          {
+            if (order["type"] === "buy")
+            {
+              // check if its not the best offer or if its best but there is still available amount to make a new order with the entire amount
+              if (order["unit_price"] !== bestBuyOffer || (order["unit_price"] === bestBuyOffer && available_amount > 0))
+              {
+                //cancels the selling order placed
+                await api.CancelOrder(token, order["id"]);
+                newBalanceNeeded = true;
+              }
+            }
+          }
+        }
+        if (newBalanceNeeded)
+        {
+          let newBalance = await api.GetBalance(token);
+          currencyAmountToBeTraded = logic.GetAvailableAmount(buyingData.balance.currency_code, newBalance);
+        }
+      }  
+
+      // check if the available money amount is higher or equal to the minimum trade value
+      if (currencyAmountToBeTraded >= Locals.minimumTradeMoneyAmount)
+      {
+        let result = logic.CheckBuyTriggers(buyingData.currencies);
+        // check if there is good oportunities to sell currency
+        if (result !== undefined)
+        {
+          //////////////////////////////////////////
+          // -------- place buying order -------- //
+          //////////////////////////////////////////
+          let currencyBuyingValue = result["buying_value"];
+          let currencyAmount = logic.ConvertMoneyToCurrency(currencyAmountToBeTraded, currencyBuyingValue);
+          api.CreateOrder(user.token, result["currency_code"], currencyAmount, "buy", currencyBuyingValue);
+          //console.log("buying order should be placed: "+result["currency_code"]+" , qtd: "+currencyAmount+" preco: "+currencyBuyingValue);
+        }
+      }
+    }
+  } catch (error) {
+    throw "executeBuyingTrigger -> "+error;
+  }
+}
+
+async function executeSellingTrigger(token, balance, ticker, userOrders, trades, trigger)
+{
+  try
+  {
+    let locked_amount = balance["locked_amount"];
+    let available_amount = balance["available_amount"];
+    // check if there are resources of this currency
+    if (available_amount > 0 || locked_amount > 0)
+    {
+      let currencyAmountToBeTraded = available_amount;
+
+      if (locked_amount > 0)
+      {
+        let newBalanceNeeded = false;
+        let bestSellOffer = ticker["sell"];
+        for (order of userOrders)
+        { 
+          if (order["type"] === "sell")
           {
             // check if its not the best offer or if its best but there is still available amount to make a new order with the entire amount
-            if (order["unit_price"] !== bestBuyOffer || (order["unit_price"] === bestBuyOffer && available_amount > 0))
+            if (order["unit_price"] !== bestSellOffer || (order["unit_price"] === bestSellOffer && available_amount > 0))
             {
               //cancels the selling order placed
               await api.CancelOrder(token, order["id"]);
@@ -96,82 +156,32 @@ async function executeBuyingTrigger(token, buyingData)
             }
           }
         }
-      }
-      if (newBalanceNeeded)
-      {
-        let newBalance = await api.GetBalance(token);
-        currencyAmountToBeTraded = logic.GetAvailableAmount(buyingData.balance.currency_code, newBalance);
-      }
-    }  
-
-    // check if the available money amount is higher or equal to the minimum trade value
-    if (currencyAmountToBeTraded >= Locals.minimumTradeMoneyAmount)
-    {
-      let result = logic.CheckBuyTriggers(buyingData.currencies);
-      // check if there is good oportunities to sell currency
-      if (result !== undefined)
-      {
-        //////////////////////////////////////////
-        // -------- place buying order -------- //
-        //////////////////////////////////////////
-        let currencyBuyingValue = result["buying_value"];
-        let currencyAmount = logic.ConvertMoneyToCurrency(currencyAmountToBeTraded, currencyBuyingValue);
-        await api.CreateOrder(user.token, result["currency_code"], currencyAmount, "buy", currencyBuyingValue);
-        //console.log("buying order should be placed: "+result["currency_code"]+" , qtd: "+currencyAmount+" preco: "+currencyBuyingValue);
-      }
-    }
-  }
-}
-
-async function executeSellingTrigger(token, balance, currency_code, ticker, userOrders, trades, trigger)
-{
-  let locked_amount = balance["locked_amount"];
-  let available_amount = balance["available_amount"];
-  // check if there are resources of this currency
-  if (available_amount > 0 || locked_amount > 0)
-  {
-    let currencyAmountToBeTraded = available_amount;
-
-    if (locked_amount > 0)
-    {
-      let newBalanceNeeded = false;
-      let bestSellOffer = ticker["sell"];
-      for (order of userOrders)
-      { 
-        if (order["type"] === "sell")
+        if (newBalanceNeeded)
         {
-          // check if its not the best offer or if its best but there is still available amount to make a new order with the entire amount
-          if (order["unit_price"] !== bestSellOffer || (order["unit_price"] === bestSellOffer && available_amount > 0))
-          {
-            //cancels the selling order placed
-            await api.CancelOrder(token, order["id"]);
-            newBalanceNeeded = true;
+          let newBalance = await api.GetBalance(token);
+          currencyAmountToBeTraded = logic.GetAvailableAmount(balance.currency_code, newBalance);
+        }
+      }
+
+      if (currencyAmountToBeTraded > 0)
+      {
+        let sellingPrice = logic.CheckSellTriggers(balance.currency_code, trigger, trades, ticker);
+        // check if there is good oportunities to sell currency
+        if (sellingPrice !== undefined)
+        {
+          // check if the currency amount is higher or equal to the minimum trade value
+          if (currencyAmountToBeTraded*sellingPrice >= Locals.minimumTradeMoneyAmount)
+          { 
+            /////////////////////////////////////////////////
+            // ----------- place selling order ----------- //
+            /////////////////////////////////////////////////
+            api.CreateOrder(user.token, balance.currency_code, currencyAmountToBeTraded, "sell", sellingPrice);
+            //console.log("selling order that should be placed: "+balance.currency_code+" , qtd: "+currencyAmountToBeTraded+" preco: "+sellingPrice);
           }
         }
       }
-      if (newBalanceNeeded)
-      {
-        let newBalance = await api.GetBalance(token);
-        currencyAmountToBeTraded = logic.GetAvailableAmount(currency_code, newBalance);
-      }
     }
-
-    if (currencyAmountToBeTraded > 0)
-    {
-      let sellingPrice = logic.CheckSellTriggers(currency_code, trigger, trades, ticker);
-      // check if there is good oportunities to sell currency
-      if (sellingPrice !== undefined)
-      {
-        // check if the currency amount is higher or equal to the minimum trade value
-        if (currencyAmountToBeTraded*sellingPrice >= Locals.minimumTradeMoneyAmount)
-        { 
-          /////////////////////////////////////////////////
-          // ----------- place selling order ----------- //
-          /////////////////////////////////////////////////
-          api.CreateOrder(user.token, currency_code, currencyAmountToBeTraded, "sell", sellingPrice);
-          //console.log("selling order that should be placed: "+currency_code+" , qtd: "+currencyAmountToBeTraded+" preco: "+sellingPrice);
-        }
-      }
-    }
+  } catch (error) {
+    throw "executeSellingTrigger -> "+error;
   }
 }

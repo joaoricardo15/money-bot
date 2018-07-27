@@ -16,11 +16,20 @@ process.argv.forEach((val) => {
 });
 
 setInterval(() => {
-  if (main.Globals.Runable == true)
-    main.Run(); 
+  try {
+    if (main.Globals.Runable == true)
+      main.Run();
+  } catch (error) {
+    if (Globals.envMode === Globals.env.Local)
+      console.log(new Date()+"\nerror: "+error);
+  }
 }, updateInterval);
 
 app.use(express.static('www'));
+
+app.get('/v1/wallets/balance', function(req, res) {
+  console.log("chegou");
+});
 
 app.get(':userId/triggers', function(req, res) {
   let user = crm.users.find( x => x.id === userId);

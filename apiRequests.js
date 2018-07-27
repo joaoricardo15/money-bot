@@ -1,5 +1,6 @@
-let https = require('https')
-  , url = "api.bitcointrade.com.br";
+let https = require('http')
+//  , url = "api.bitcointrade.com.br";
+, url = "http://localhost";
 
 module.exports.Get = function (token, path)
 {
@@ -32,6 +33,9 @@ module.exports.Get = function (token, path)
           });
         
       });
+    req.on("error", (error) => {
+      reject("https.get -> "+error);
+    });
     req.end();
   });
 }
@@ -71,6 +75,9 @@ module.exports.Request = function (token, path, method, body)
         });
       });
     req.write(payload);
+    req.on("error", (error) => {
+      reject("https.request -> ",error);
+    });
     req.end();
   });
 }
