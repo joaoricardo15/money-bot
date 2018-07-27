@@ -70,8 +70,8 @@ module.exports.CheckBuyTriggers = function (currencies)
 
     if (isBestOportunity)
       return {
-        currencyCode: currencyOportunities[i].currency_code,
-        buyingValue: currencyOportunities[i].price };
+        currency_code: currencyOportunities[i].currency_code,
+        buying_value: currencyOportunities[i].price };
   }
 }
 

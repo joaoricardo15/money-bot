@@ -95,14 +95,14 @@ module.exports.CreateOrder = async function (token, currency_code, amount, type,
 {
   try
   {
-    let payload = JSON.stringify({
+    let body = {
       currency: currency_code,
       amount: amount,
       type: type,
       subtype: "limited",
       unit_price: unit_price 
-    });
-    let result = await api.Request(token, "/v1/market/create_order", "POST", payload);
+    };
+    let result = await api.Request(token, "/v1/market/create_order", "POST", body);
     if (result["message"] !== null)
       throw result["message"];
 
@@ -120,7 +120,10 @@ module.exports.CancelOrder = async function (token, orderId)
 {
   try
   {
-    let result = await api.Request(token, "/v1/market/user_orders", "DELETE", {"id": orderId});
+    let body = {
+      "id": orderId
+    };
+    let result = await api.Request(token, "/v1/market/user_orders", "DELETE", body);
     if (result["message"] !== null)
       throw result["message"];
 

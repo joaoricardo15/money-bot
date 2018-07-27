@@ -36,10 +36,11 @@ module.exports.Get = function (token, path)
   });
 }
 
-module.exports.Request = function (token, path, method, payload)
+module.exports.Request = function (token, path, method, body)
 {
   return new Promise(function (resolve, reject) {
-    var req = https.request({
+    let payload = JSON.stringify(body);
+    let req = https.request({
       host: url,
       path: path,
       method: method,
