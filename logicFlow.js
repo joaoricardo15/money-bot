@@ -77,16 +77,16 @@ async function executeBuyingTrigger(token, buyingData)
   {
     let currencyAmountToBeTraded = available_amount;
 
-    let newBalanceNeeded = false;
     if (locked_amount >= Locals.minimumTradeMoneyAmount)
     {
+      let newBalanceNeeded = false;
       for (currency of buyingData.currencies)
       {
+        let bestBuyOffer = currency.ticker["buy"];s
         for (order of currency.userOrders)
         {
           if (order["type"] === "buy")
           {
-            let bestBuyOffer = currency.ticker["buy"];
             // check if its not the best offer or if its best but there is still available amount to make a new order with the entire amount
             if (order["unit_price"] !== bestBuyOffer || (order["unit_price"] === bestBuyOffer && available_amount > 0))
             {
@@ -97,12 +97,12 @@ async function executeBuyingTrigger(token, buyingData)
           }
         }
       }
+      if (newBalanceNeeded)
+      {
+        let newBalance = await api.GetBalance(token);
+        currencyAmountToBeTraded = logic.GetAvailableAmount(buyingData.balance.currency_code, newBalance);
+      }
     }  
-    if (newBalanceNeeded)
-    {
-      let newBalance = await api.GetBalance(token);
-      currencyAmountToBeTraded = logic.GetAvailableAmount(buyingData.balance.currency_code, newBalance);
-    }
 
     // check if the available money amount is higher or equal to the minimum trade value
     if (currencyAmountToBeTraded >= Locals.minimumTradeMoneyAmount)
@@ -120,7 +120,6 @@ async function executeBuyingTrigger(token, buyingData)
         //console.log("buying order should be placed: "+result["currency_code"]+" , qtd: "+currencyAmount+" preco: "+currencyBuyingValue);
       }
     }
-
   }
 }
 
@@ -169,7 +168,7 @@ async function executeSellingTrigger(token, balance, currency_code, ticker, user
           /////////////////////////////////////////////////
           // ----------- place selling order ----------- //
           /////////////////////////////////////////////////
-          await api.CreateOrder(user.token, currency_code, currencyAmountToBeTraded, "sell", sellingPrice);
+          api.CreateOrder(user.token, currency_code, currencyAmountToBeTraded, "sell", sellingPrice);
           //console.log("selling order that should be placed: "+currency_code+" , qtd: "+currencyAmountToBeTraded+" preco: "+sellingPrice);
         }
       }
