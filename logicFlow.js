@@ -99,18 +99,14 @@ async function executeSellingTrigger(token, currencyAmount, currency_code, trigg
     if (currencyAmount > 0)
     {
       let sellingOportunity = logic.CheckSellTriggers(currency_code, trigger, ticker, trades);
-      //check if there is good oportunities to sell currency
-      if (sellingOportunity !== undefined)
+      //check if there is good oportunities to sell currency and if the currency amount is higher or equal to the minimum trade value
+      if (sellingOportunity !== undefined && currencyAmount*sellingOportunity >= Locals.minimumTradeMoneyAmount)
       {
-        //check if the currency amount is higher or equal to the minimum trade value
-        if (currencyAmount*sellingOportunity >= Locals.minimumTradeMoneyAmount)
-        { 
-          /////////////////////////////////////////////////
-          // ----------- place selling order ----------- //
-          /////////////////////////////////////////////////
-          await api.CreateOrder(token, currency_code, currencyAmount, "sell", sellingOportunity);
-          //console.log("selling order that should be placed: "+currency_code+" , qtd: "+currencyAmount+" preco: "+sellingOportunity);
-        }
+        /////////////////////////////////////////////////
+        // ----------- place selling order ----------- //
+        /////////////////////////////////////////////////
+        await api.CreateOrder(token, currency_code, currencyAmount, "sell", sellingOportunity);
+        //console.log("selling order that should be placed: "+currency_code+" , qtd: "+currencyAmount+" preco: "+sellingOportunity);
       }
     }
   } catch (error) {

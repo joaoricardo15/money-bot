@@ -101,7 +101,7 @@ module.exports.CheckSellTriggers = function (currency_code, triggers, ticker, tr
   { 
     let isLow = true;
 
-    for (let i = trades.length-1; i >= trades.length-numberOfTradesForSellTriggers; index--) {
+    for (let i = trades.length-1; i >= trades.length-numberOfTradesForSellTriggers; i--) {
       if(!(trades[i]["unit_price"] < lowTrigger))
         isLow = false;
     }
@@ -111,7 +111,7 @@ module.exports.CheckSellTriggers = function (currency_code, triggers, ticker, tr
     {
       let lowEmergencyCount = 0;
 
-      for (let i = trades.length-1; i >= trades.length-numberOfTradesForSellTriggers; index--) {
+      for (let i = trades.length-1; i >= trades.length-numberOfTradesForSellTriggers; i--) {
         if(!(trades[i]["unit_price"] < lowTrigger*lowEmergency))
           lowEmergencyCount++;
       }
