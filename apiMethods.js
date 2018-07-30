@@ -1,11 +1,11 @@
 let api = require('./apiRequests')
-  , server = require('./server')
+  , server = require('./server');
 
 module.exports.GetBalance = async function (token)
 {
   try
   {
-    let result = await api.Get(token, "/v1/wallets/balance");
+    let result = await api.Request(token, "/v1/wallets/balance", "GET");
     if (result["message"] !== null)
       throw result["message"];
 
@@ -20,7 +20,7 @@ module.exports.GetOrders = async function (token, currency_code)
 {
   try
   {
-    let result = await api.Get(token, "/v1/market?currency="+currency_code);
+    let result = await api.Request(token, "/v1/market?currency="+currency_code, "GET");
     if (result["message"] !== null)
       throw result["message"];
 
@@ -35,7 +35,7 @@ module.exports.GetTrades = async function (token, currency_code, page_size)
 {
   try
   {
-    let result = await api.Get(token, "/v1/public/"+currency_code+"/trades?page_size="+page_size+"&current_page=1");
+    let result = await api.Request(token, "/v1/public/"+currency_code+"/trades?page_size="+page_size+"&current_page=1", "GET");
     if (result["message"] !== null)
       throw result["message"];
 
@@ -46,11 +46,11 @@ module.exports.GetTrades = async function (token, currency_code, page_size)
   }
 }
 
-module.exports.GetTiker = async function (token, currency_code)
+module.exports.GetTicker = async function (token, currency_code)
 {
   try
   {
-    let result = await api.Get(token, "/v1/public/"+currency_code+"/ticker");
+    let result = await api.Request(token, "/v1/public/"+currency_code+"/ticker", "GET");
     if (result["message"] !== null)
       throw result["message"];
     
@@ -65,7 +65,7 @@ module.exports.GetSummary = async function (token, currency_code)
 {
   try
   {
-    let result = await api.Get(token, "/v1/market/summary?currency="+currency_code);
+    let result = await api.Request(token, "/v1/market/summary?currency="+currency_code, "GET");
     if (result["message"] !== null)
       throw result["message"];
 
@@ -80,7 +80,7 @@ module.exports.GetUserOrders = async function (token, currency_code, status)
 {
   try
   {
-    let result = await api.Get(token, "/v1/market/user_orders/list?currency="+currency_code+"&status="+status); 
+    let result = await api.Request(token, "/v1/market/user_orders/list?currency="+currency_code+"&status="+status, "GET"); 
     if (result["message"] !== null)
       throw result["message"];
 

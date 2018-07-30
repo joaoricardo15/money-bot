@@ -15,13 +15,14 @@ process.argv.forEach((val) => {
     Globals.envMode = Globals.env.Local;
 });
 
-setInterval(() => {
-  try {
+setInterval(async () => {
+  try 
+  {
     if (main.Globals.Runable == true)
-      main.Run();
+      await main.Run();
   } catch (error) {
     if (Globals.envMode === Globals.env.Local)
-      console.log(new Date()+"\nerror: "+error);
+      console.log(new Date()+"\nerror on server: "+error);
   }
 }, updateInterval);
 

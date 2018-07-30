@@ -1,7 +1,18 @@
 let server = require('./server');
+let numberOfTradesForSellTriggers = 6;
 let lowEmergency = 0.99;
 let highProfit = 1.01;
 let lowProfit = 0.99;
+
+module.exports.updateSellingTrigger = function (buyingData)
+{
+
+}
+
+module.exports.updateBuyingTrigger = function (buyingData)
+{
+
+}
 
 module.exports.CheckBuyOportunities = function (currencies)
 {
@@ -13,41 +24,42 @@ module.exports.CheckBuyTriggers = function (currencies)
   let currencyOportunities = [];
   for (currency of currencies)
   {
-    let last = currency.ticker["last"];
-    let bestBuyOffer = currency.ticker["buy"];
-    let bestSellOffer = currency.ticker["sell"];
-    let currency_code = currency["currency_code"];
-    let triggerPrice = currency.trigger.price;
-    let triggerEnable = currency.trigger.enable;
-    let price = 1;
-
-    if (triggerEnable === true && last < triggerPrice && bestBuyOffer + 0.01 < triggerPrice)
-    { 
-      // check if it's a very good buying oportunity (last trade was above triggerPrice*lowProfit*lowProfit)
-      if (bestSellOffer < triggerPrice*lowProfit*lowProfit)
-      {
-        if (server.Globals.envMode === server.Globals.env.Local)
-          console.log(currency_code," -> very good buying oportunity: ",bestSellOffer.toFixed(2));
-        price = bestSellOffer.toFixed(2);
-      }
-      // check if it's a good buying oportunity (last trade was above triggerPrice*lowProfit)
-      else if (bestSellOffer - 0.01 < triggerPrice*lowProfit)
-      {
-        if (server.Globals.envMode === server.Globals.env.Local)
-          console.log(currency_code," -> good buying oportunity: ",(bestSellOffer-0.01).toFixed(2));
-        price = (bestSellOffer-0.01).toFixed(2);
-      }
-      // check if it's a normal buying oportunity (last trade was above triggerPrice*lowProfit)
-      else
-      {
-        if (server.Globals.envMode === server.Globals.env.Local)
-          console.log(currency_code," -> buying oportunity: ",(bestBuyOffer + 0.01).toFixed(2));
-        price = (bestBuyOffer + 0.01).toFixed(2);
-      }
-      
-      // calculates the potencial of the oportunities
-      currencyOportunities.push({currency_code: currency_code, price: price, potencial: triggerPrice/price});
-    }   
+    let triggerEnable = currency.triggers.buy.enable;
+    if (triggerEnable === true)
+    {
+      let bestBuyOffer = currency.ticker["buy"];
+      let triggerPrice = currency.triggers.buy.price;
+      if (bestBuyOffer + 0.01 < triggerPrice)
+      { 
+        let bestSellOffer = currency.ticker["sell"];
+        let currency_code = currency["currency_code"];
+        let price;
+        // check if it's a very good buying oportunity (last trade was above triggerPrice*lowProfit*lowProfit)
+        if (bestSellOffer < triggerPrice*lowProfit*lowProfit)
+        {
+          if (server.Globals.envMode === server.Globals.env.Local)
+            console.log(currency_code," -> very good buying oportunity: ",bestSellOffer.toFixed(2));
+          price = bestSellOffer.toFixed(2);
+        }
+        // check if it's a good buying oportunity (last trade was above triggerPrice*lowProfit)
+        else if (bestSellOffer - 0.01 < triggerPrice*lowProfit)
+        {
+          if (server.Globals.envMode === server.Globals.env.Local)
+            console.log(currency_code," -> good buying oportunity: ",(bestSellOffer-0.01).toFixed(2));
+          price = (bestSellOffer-0.01).toFixed(2);
+        }
+        // check if it's a normal buying oportunity (last trade was above triggerPrice*lowProfit)
+        else
+        {
+          if (server.Globals.envMode === server.Globals.env.Local)
+            console.log(currency_code," -> buying oportunity: ",(bestBuyOffer + 0.01).toFixed(2));
+          price = (bestBuyOffer + 0.01).toFixed(2);
+        }
+        
+        // calculates the potencial of the oportunities
+        currencyOportunities.push({currency_code: currency_code, price: price, potencial: triggerPrice/price});
+      } 
+    } 
   }
 
   // choose the bestbuying oportunity
@@ -75,7 +87,7 @@ module.exports.CheckBuyTriggers = function (currencies)
   }
 }
 
-module.exports.CheckSellTriggers = function (currency_code, triggers, trades, ticker)
+module.exports.CheckSellTriggers = function (currency_code, triggers, ticker, trades)
 {
   let last = ticker["last"];
   let bestBuyOffer = ticker["buy"];
@@ -89,19 +101,20 @@ module.exports.CheckSellTriggers = function (currency_code, triggers, trades, ti
   { 
     let isLow = true;
 
-    trades.forEach(trade => {
-      if(!(trade["unit_price"] < lowTrigger))
+    for (let i = trades.length-1; i >= trades.length-numberOfTradesForSellTriggers; index--) {
+      if(!(trades[i]["unit_price"] < lowTrigger))
         isLow = false;
-    });  
+    }
+    
     // check if the x last trades were above lowTrigger
     if (isLow)
     {
       let lowEmergencyCount = 0;
 
-      trades.forEach(trade => {
-        if(trade["unit_price"] < lowTrigger*lowEmergency)
+      for (let i = trades.length-1; i >= trades.length-numberOfTradesForSellTriggers; index--) {
+        if(!(trades[i]["unit_price"] < lowTrigger*lowEmergency))
           lowEmergencyCount++;
-      });  
+      }
       
       // check if it's a critical emergency (half of the x last trades were above lowTrigger*lowEmergency)
       if (lowEmergencyCount == trades.length)

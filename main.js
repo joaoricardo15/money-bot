@@ -14,16 +14,16 @@ module.exports.Run = async function()
   let initialTime = Date.now();
 
   try {
-    for(user of crm.users)
-    { 
-      //user.currencies = await logicFlow.updateTriggers(user); 
-      await logicFlow.executeTriggers(user); 
-    }
+
+    for(let i=0; i < crm.users.length; i++)
+      await logicFlow.executeTriggers(crm.users[i]); 
+
   } catch(error) {
     if (server.Globals.envMode === server.Globals.env.Local)
       console.log(new Date()+"\nerror: "+error);
   }
 
+  //console.log("duration main: "+(Date.now()-initialTime)+"\n********************");
   waitNextCycle(initialTime);
 }
 
