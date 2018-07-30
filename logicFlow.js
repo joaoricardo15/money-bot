@@ -11,56 +11,24 @@ module.exports.executeTriggers = async function (user)
   {
     let balance = await api.GetBalance(user.token);
     let buyingData = { currencies: [], balance: null };
-    // for (currency of balance)
-    // {
-    //   if (currency.currency_code === "BRL")
-    //     buyingData.balance = currency;
-    //   else
-    //   {
-    //     let userCurrency = user.currencies.find(x => x.currency_code === currency.currency_code);
-    //     // check if this currency from balance has reference on user's settings
-    //     if (userCurrency)
-    //     {
-    //       let tickerPromise = api.GetTicker(user.token, currency.currency_code);
-    //       let tradesPromise = api.GetTrades(user.token, currency.currency_code, Locals.numberOfTradesForCurrencyAnalysis);
-    //       let userOrdersPromise = api.GetUserOrders(user.token, currency.currency_code, "waiting+executed_partially");
-    //       let [ticker, trades, userOrders] = [ await tickerPromise, await tradesPromise, await userOrdersPromise ];
-
-    //       let currencyData = {
-    //         currency_code: currency.currency_code,
-    //         triggers: userCurrency.triggers,
-    //         ticker: ticker,
-    //         trades: trades["trades"],
-    //         userOrders: userOrders["orders"]
-    //       };
-
-    //       //console.log("currencyData: ",currencyData.trades[currencyData.trades.length-1]);
-    //       buyingData.currencies.push(currencyData);
-
-    //       //userCurrency.triggers.sell = logic.updateSellingTrigger(currencyData);
-    //       //let currencyAmount = await updateTradeAmount(user.token, currency, currencyData.ticker, currencyData.userOrders, "sell");
-    //       // await executeSellingTrigger(user.token, currencyAmount, currencyData.currency_code, currencyData.triggers.sell, currencyData.ticker, currencyData.trades);  
-    //     }
-    //   }
-    // }
-
-    for (let i=0; i< balance.length; i++)
+    for (currency of balance)
     {
-      if (balance[i].currency_code === "BRL")
-        buyingData.balance = balance[i];
+      if (currency.currency_code === "BRL")
+        buyingData.balance = currency;
       else
       {
-        let userCurrency = user.currencies.find(x => x.currency_code === balance[i].currency_code);
+        let userCurrency = user.currencies.find(x => x.currency_code === currency.currency_code);
         // check if this currency from balance has reference on user's settings
         if (userCurrency)
         {
-          let tickerPromise = api.GetTicker(user.token, balance[i].currency_code);
-          let tradesPromise = api.GetTrades(user.token, balance[i].currency_code, Locals.numberOfTradesForCurrencyAnalysis);
-          let userOrdersPromise = api.GetUserOrders(user.token, balance[i].currency_code, "waiting+executed_partially");
-          let [ticker, trades, userOrders] = [ await tickerPromise, await tradesPromise, await userOrdersPromise ];
+          let ticker = await api.GetTicker(user.token, currency.currency_code);
+          let trades = await api.GetTrades(user.token, currency.currency_code, Locals.numberOfTradesForCurrencyAnalysis);
+          let userOrders = await api.GetUserOrders(user.token, currency.currency_code, "waiting+executed_partially");
+          
+          //let [ticker, trades, userOrders] = [ await tickerPromise, await tradesPromise, await userOrdersPromise ];
 
           let currencyData = {
-            currency_code: balance[i].currency_code,
+            currency_code: currency.currency_code,
             triggers: userCurrency.triggers,
             ticker: ticker,
             trades: trades["trades"],
@@ -71,7 +39,7 @@ module.exports.executeTriggers = async function (user)
           buyingData.currencies.push(currencyData);
 
           //userCurrency.triggers.sell = logic.updateSellingTrigger(currencyData);
-          let currencyAmount = await updateTradeAmount(user.token, balance[i], currencyData.ticker, currencyData.userOrders, "sell");
+          let currencyAmount = await updateTradeAmount(user.token, currency, currencyData.ticker, currencyData.userOrders, "sell");
           await executeSellingTrigger(user.token, currencyAmount, currencyData.currency_code, currencyData.triggers.sell, currencyData.ticker, currencyData.trades);  
         }
       }
@@ -79,15 +47,9 @@ module.exports.executeTriggers = async function (user)
 
     //userCurrency.triggers.buy = logic.updateBuyingTrigger(buyingData.currencies);
     let currencyAmount = 0;
-    // for(currency of buyingData.currencies)
-    // {
-    //   let newAmount = await updateTradeAmount(user.token, buyingData.balance, currency.ticker, currency.userOrders, "buy");
-    //   if (newAmount > currencyAmount)
-    //     currencyAmount = newAmount;
-    // }
-    for(let i=0; i < buyingData.currencies.length; i++)
+    for(currency of buyingData.currencies)
     {
-      let newAmount = await updateTradeAmount(user.token, buyingData.balance, buyingData.currencies[i].ticker, buyingData.currencies[i].userOrders, "buy");
+      let newAmount = await updateTradeAmount(user.token, buyingData.balance, currency.ticker, currency.userOrders, "buy");
       if (newAmount > currencyAmount)
         currencyAmount = newAmount;
     }

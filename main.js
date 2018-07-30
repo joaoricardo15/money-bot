@@ -15,8 +15,8 @@ module.exports.Run = async function()
 
   try {
 
-    for(let i=0; i < crm.users.length; i++)
-      await logicFlow.executeTriggers(crm.users[i]); 
+    for(user of crm.users)
+      await logicFlow.executeTriggers(user); 
 
   } catch(error) {
     if (server.Globals.envMode === server.Globals.env.Local)
