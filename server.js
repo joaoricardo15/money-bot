@@ -15,22 +15,12 @@ process.argv.forEach((val) => {
     Globals.envMode = Globals.env.Local;
 });
 
-setInterval(async () => {
-  try 
-  {
-    if (main.Globals.Runable == true)
-      await main.Run();
-  } catch (error) {
-    if (Globals.envMode === Globals.env.Local)
-      console.log(new Date()+"\nerror on server: "+error);
-  }
+setInterval(() => {
+  if (main.Globals.Runable == true)
+    main.Run();
 }, updateInterval);
 
 app.use(express.static('www'));
-
-app.get('/v1/wallets/balance', function(req, res) {
-  console.log("chegou");
-});
 
 app.get(':userId/triggers', function(req, res) {
   let user = crm.users.find( x => x.id === userId);

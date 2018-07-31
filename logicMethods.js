@@ -14,11 +14,6 @@ module.exports.updateBuyingTrigger = function (buyingData)
 
 }
 
-module.exports.CheckBuyOportunities = function (currencies)
-{
-
-}
-
 module.exports.CheckBuyTriggers = function (currencies)
 {
   let currencyOportunities = [];
@@ -27,11 +22,11 @@ module.exports.CheckBuyTriggers = function (currencies)
     let triggerEnable = currency.triggers.buy.enable;
     if (triggerEnable === true)
     {
-      let bestBuyOffer = currency.ticker["buy"];
+      let bestBuyOffer = currency.orders["buying"][0]; // currency.ticker["buy"];
       let triggerPrice = currency.triggers.buy.price;
       if (bestBuyOffer + 0.01 < triggerPrice)
       { 
-        let bestSellOffer = currency.ticker["sell"];
+        let bestSellOffer = currency.orders["selling"][0]; // currency.ticker["sell"];
         let currency_code = currency["currency_code"];
         let price;
         // check if it's a very good buying oportunity (last trade was above triggerPrice*lowProfit*lowProfit)
@@ -87,11 +82,13 @@ module.exports.CheckBuyTriggers = function (currencies)
   }
 }
 
-module.exports.CheckSellTriggers = function (currency_code, triggers, ticker, trades)
+module.exports.CheckSellTriggers = function (currency_code, triggers, orders, trades)
 {
-  let last = ticker["last"];
-  let bestBuyOffer = ticker["buy"];
-  let bestSellOffer = ticker["sell"];
+  let last = orders["executed"][0];         // ticker["last"];
+  let bestBuyOffer = orders["buying"][0];   // ticker["buy"];
+  let bestSellOffer = orders["selling"][0]; // ticker["sell"];
+
+
   let lowTrigger = triggers["low"].price;
   let highTrigger = triggers["high"].price;
   let lowTriggerEnable = triggers["low"].enable;
@@ -101,7 +98,7 @@ module.exports.CheckSellTriggers = function (currency_code, triggers, ticker, tr
   { 
     let isLow = true;
 
-    for (let i = trades.length-1; i >= trades.length-numberOfTradesForSellTriggers; i--) {
+    for (let i = 0; i < numberOfTradesForSellTriggers; i++) {
       if(!(trades[i]["unit_price"] < lowTrigger))
         isLow = false;
     }
@@ -111,7 +108,7 @@ module.exports.CheckSellTriggers = function (currency_code, triggers, ticker, tr
     {
       let lowEmergencyCount = 0;
 
-      for (let i = trades.length-1; i >= trades.length-numberOfTradesForSellTriggers; i--) {
+      for (let i = 0; i < numberOfTradesForSellTriggers; i++) {
         if(!(trades[i]["unit_price"] < lowTrigger*lowEmergency))
           lowEmergencyCount++;
       }
