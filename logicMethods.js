@@ -1,5 +1,5 @@
 let server = require('./server');
-let numberOfTradesForSellTriggers = 6;
+let numberOfTradesForSellTriggers = 10;
 let lowEmergency = 0.99;
 let highProfit = 1.01;
 let lowProfit = 0.99;
@@ -17,17 +17,17 @@ module.exports.updateBuyingTrigger = function (buyingData)
 module.exports.CheckBuyTriggers = function (currencies)
 {
   let currencyOportunities = [];
-  for (currency of currencies)
+  for (let currencyData of currencies)
   {
-    let triggerEnable = currency.triggers.buy.enable;
+    let currency_code = currencyData["currency_code"];
+    let bestBuyOffer = currencyData.orders["buying"][0]; 
+    let bestSellOffer = currencyData.orders["selling"][0]; // currency.ticker["sell"];
+    let triggerPrice = currencyData.triggers.buy.price;
+    let triggerEnable = currencyData.triggers.buy.enable;
     if (triggerEnable === true)
     {
-      let bestBuyOffer = currency.orders["buying"][0]; // currency.ticker["buy"];
-      let triggerPrice = currency.triggers.buy.price;
       if (bestBuyOffer + 0.01 < triggerPrice)
       { 
-        let bestSellOffer = currency.orders["selling"][0]; // currency.ticker["sell"];
-        let currency_code = currency["currency_code"];
         let price;
         // check if it's a very good buying oportunity (last trade was above triggerPrice*lowProfit*lowProfit)
         if (bestSellOffer < triggerPrice*lowProfit*lowProfit)
@@ -82,24 +82,22 @@ module.exports.CheckBuyTriggers = function (currencies)
   }
 }
 
-module.exports.CheckSellTriggers = function (currency_code, triggers, orders, trades)
+module.exports.CheckSellTriggers = function (currencyData)
 {
-  let last = orders["executed"][0];         // ticker["last"];
-  let bestBuyOffer = orders["buying"][0];   // ticker["buy"];
-  let bestSellOffer = orders["selling"][0]; // ticker["sell"];
-
-
-  let lowTrigger = triggers["low"].price;
-  let highTrigger = triggers["high"].price;
-  let lowTriggerEnable = triggers["low"].enable;
-  let highTriggerEnable = triggers["high"].enable;
+  let last = currencyData.orders["executed"][0];        
+  let bestBuyOffer = currencyData.orders["buying"][0]; 
+  let bestSellOffer = currencyData.orders["selling"][0]; 
+  let executedTrades = currencyData.orders["executed"];
+  let lowTrigger = currencyData.triggers["low"].price;
+  let highTrigger = currencyData.triggers["high"].price;
+  let lowTriggerEnable = currencyData.triggers["low"].enable;
+  let highTriggerEnable = currencyData.triggers["high"].enable;
   
   if (lowTriggerEnable === true && last < lowTrigger && bestSellOffer < lowTrigger)
   { 
     let isLow = true;
-
     for (let i = 0; i < numberOfTradesForSellTriggers; i++) {
-      if(!(trades[i]["unit_price"] < lowTrigger))
+      if(!(executedTrades[i]["unit_price"] < lowTrigger))
         isLow = false;
     }
     
@@ -107,38 +105,37 @@ module.exports.CheckSellTriggers = function (currency_code, triggers, orders, tr
     if (isLow)
     {
       let lowEmergencyCount = 0;
-
       for (let i = 0; i < numberOfTradesForSellTriggers; i++) {
-        if(!(trades[i]["unit_price"] < lowTrigger*lowEmergency))
+        if(!(executedTrades[i]["unit_price"] < lowTrigger*lowEmergency))
           lowEmergencyCount++;
       }
       
       // check if it's a critical emergency (half of the x last trades were above lowTrigger*lowEmergency)
-      if (lowEmergencyCount == trades.length)
+      if (lowEmergencyCount == numberOfTradesForSellTriggers)
       {
         if (server.Globals.envMode === server.Globals.env.Local)
-          console.log(currency_code," -> critical lowEmergency: ",bestBuyOffer.toFixed(2));
+          console.log(currencyData.currency_code," -> critical lowEmergency: ",bestBuyOffer.toFixed(2));
         return bestBuyOffer.toFixed(2);
       }
       // check if it's a normal emergency (all of x last trades were above lowTrigger*lowEmergency)
-      else if (lowEmergencyCount >= (trades.length/2).toFixed(0))
+      else if (lowEmergencyCount >= (numberOfTradesForSellTriggers/2).toFixed(0))
       {
         if (server.Globals.envMode === server.Globals.env.Local)
-          console.log(currency_code," -> normal lowEmergency: ",(bestBuyOffer + 0.01).toFixed(2));
+          console.log(currencyData.currency_code," -> normal lowEmergency: ",(bestBuyOffer + 0.01).toFixed(2));
         return (bestBuyOffer + 0.01).toFixed(2);
       }
       // check if it's time to sell and the price is not above buying price (to avoid executer order)
       else if (bestSellOffer - 0.01 > bestBuyOffer)
       {
         if (server.Globals.envMode === server.Globals.env.Local)
-          console.log(currency_code," -> normal sell: ",(bestSellOffer - 0.01).toFixed(2));
+          console.log(currencyData.currency_code," -> normal sell: ",(bestSellOffer - 0.01).toFixed(2));
         return (bestSellOffer - 0.01).toFixed(2);
       }
         
       else
       {
         if (server.Globals.envMode === server.Globals.env.Local)
-          console.log(currency_code," -> normal sell same last: ",(bestSellOffer - 0.01).toFixed(2));
+          console.log(currencyData.currency_code," -> normal sell same last: ",(bestSellOffer - 0.01).toFixed(2));
         return bestSellOffer.toFixed(2);
       }
     }   
@@ -149,27 +146,27 @@ module.exports.CheckSellTriggers = function (currency_code, triggers, orders, tr
     if (bestBuyOffer >= highTrigger*highProfit*highProfit)
     {
       if (server.Globals.envMode === server.Globals.env.Local)
-        console.log(currency_code," -> very good selling oportunity: ",bestBuyOffer.toFixed(2));
+        console.log(currencyData.currency_code," -> very good selling oportunity: ",bestBuyOffer.toFixed(2));
       return bestBuyOffer.toFixed(2);
     }
     // check if it is a good opotunity
     else if (bestBuyOffer >= highTrigger*highProfit)
     {
       if (server.Globals.envMode === server.Globals.env.Local)
-        console.log(currency_code," -> good selling oportunity: ",(bestBuyOffer + 0.01).toFixed(2));
+        console.log(currencyData.currency_code," -> good selling oportunity: ",(bestBuyOffer + 0.01).toFixed(2));
       return (bestBuyOffer + 0.01).toFixed(2);
     }
     // check if it's time to sell and the price is not above buying price (to avoid executer order)
     else if (bestSellOffer - 0.01 > bestBuyOffer)
     {
       if (server.Globals.envMode === server.Globals.env.Local)
-        console.log(currency_code," -> normal selling oportunity: ",(bestSellOffer - 0.01).toFixed(2));
+        console.log(currencyData.currency_code," -> normal selling oportunity: ",(bestSellOffer - 0.01).toFixed(2));
       return (bestSellOffer - 0.01).toFixed(2);
     }
     else
     {
       if (server.Globals.envMode === server.Globals.env.Local)
-        console.log(currency_code," -> normal selling oportunity same last: ",(bestSellOffer - 0.01).toFixed(2));
+        console.log(currencyData.currency_code," -> normal selling oportunity same last: ",(bestSellOffer - 0.01).toFixed(2));
       return bestSellOffer.toFixed(2);
     }
   }
@@ -217,13 +214,13 @@ module.exports.GetTotalMoney = function GetTotalMoney(balance, lastValues)
 {
   var totalMoney = 0;
 
-  for (currency of balance)
+  for (let currencyBalance of balance)
   {
-    var currency_code = currency['currency_code'];
+    var currency_code = currencyBalance['currency_code'];
     if (currency_code == 'BRL')
-      totalMoney += currency['available_amount'] + currency['locked_amount'];
+      totalMoney += currencyBalance['available_amount'] + currencyBalance['locked_amount'];
     else
-      totalMoney += (currency['available_amount'] + currency['locked_amount'])*lastValues[currency_code];
+      totalMoney += (currencyBalance['available_amount'] + currencyBalance['locked_amount'])*lastValues[currency_code];
   }
 
   return totalMoney.toFixed(2);

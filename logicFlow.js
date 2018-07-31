@@ -11,21 +11,21 @@ module.exports.executeTriggers = async function (user)
   {
     let balance = await api.GetBalance(user.token);
     let buyingData = { currencies: [], balance: null };
-    for (currency of balance)
+    for (let currencyBalance of balance)
     {
-      if (currency.currency_code === "BRL")
-        buyingData.balance = currency;
+      if (currencyBalance.currency_code === "BRL")
+        buyingData.balance = currencyBalance;
       else
       {
-        let userCurrency = user.currencies.find(x => x.currency_code === currency.currency_code);
+        let userCurrency = user.currencies.find(x => x.currency_code === currencyBalance.currency_code);
         // check if this currency from balance has reference on user's settings
         if (userCurrency)
         {
-          let orders = await api.GetOrders(user.token, currency.currency_code);
-          let trades = await api.GetTrades(user.token, currency.currency_code, Locals.numberOfTradesForCurrencyAnalysis);
-          let userOrders = await api.GetUserOrders(user.token, currency.currency_code, "waiting+executed_partially");
+          let orders = await api.GetOrders(user.token, currencyBalance.currency_code);
+          let trades = await api.GetTrades(user.token, currencyBalance.currency_code, Locals.numberOfTradesForCurrencyAnalysis);
+          let userOrders = await api.GetUserOrders(user.token, currencyBalance.currency_code, "waiting+executed_partially");
           let currencyData = {
-            currency_code: currency.currency_code,
+            currency_code: currencyBalance.currency_code,
             triggers: userCurrency.triggers,
             orders: orders,
             trades: trades["trades"],
@@ -34,15 +34,15 @@ module.exports.executeTriggers = async function (user)
           buyingData.currencies.push(currencyData);
 
           //userCurrency.triggers.sell = logic.updateSellingTrigger(currencyData);
-          let currencyAmount = await updateTradeAmount(user.token, currency, currencyData.orders, currencyData.userOrders, "sell");
-          await executeSellingTrigger(user.token, currencyAmount, currencyData.currency_code, currencyData.triggers.sell, currencyData.orders, currencyData.trades);  
+          let currencyAmount = await updateTradeAmount(user.token, currencyBalance, currencyData, "sell");
+          await executeSellingTrigger(user.token, currencyAmount, currencyData);  
         }
       }
     }
 
     //userCurrency.triggers.buy = logic.updateBuyingTrigger(buyingData.currencies);
     let currencyAmount = 0;
-    for(currency of buyingData.currencies)
+    for(let currency of buyingData.currencies)
     {
       let newAmount = await updateTradeAmount(user.token, buyingData.balance, currency.orders, currency.userOrders, "buy");
       if (newAmount > currencyAmount)
@@ -55,7 +55,7 @@ module.exports.executeTriggers = async function (user)
   }
 }
 
-async function updateTradeAmount(token, balance, orders, ticker, userOrders, type)
+async function updateTradeAmount(token, balance, currencyData, type)
 {
   let locked_amount = balance["locked_amount"];
   let available_amount = balance["available_amount"];
@@ -63,9 +63,9 @@ async function updateTradeAmount(token, balance, orders, ticker, userOrders, typ
   if (locked_amount > 0)
   {
     let newBalanceNeeded = false;
-    let bestOffer = orders[type+"ing"][0];
-    let secondBestOffer = orders[type+"ing"][1];
-    for (order of userOrders)
+    let bestOffer = currencyData.orders[type+"ing"][0];
+    let secondBestOffer =  currencyData.orders[type+"ing"][1];
+    for (order of  currencyData.userOrders)
     { 
       if (order["type"] === type && (order["status"] === "waiting" || order["status"] === "executed_partially"))
       {
@@ -90,21 +90,21 @@ async function updateTradeAmount(token, balance, orders, ticker, userOrders, typ
   return currencyAmountToBeTraded;
 }
 
-async function executeSellingTrigger(token, currencyAmount, currency_code, trigger, ticker, trades)
+async function executeSellingTrigger(token, currencyAmount, currencyData)
 {
   try
   {
     if (currencyAmount > 0)
     {
-      let sellingOportunity = logic.CheckSellTriggers(currency_code, trigger, ticker, trades);
+      let sellingOportunity = logic.CheckSellTriggers(currencyData);
       //check if there is good oportunities to sell currency and if the currency amount is higher or equal to the minimum trade value
       if (sellingOportunity !== undefined && currencyAmount*sellingOportunity >= Locals.minimumTradeMoneyAmount)
       {
         /////////////////////////////////////////////////
         // ----------- place selling order ----------- //
         /////////////////////////////////////////////////
-        await api.CreateOrder(token, currency_code, currencyAmount, "sell", sellingOportunity);
-        //console.log("selling order that should be placed: "+currency_code+" , qtd: "+currencyAmount+" preco: "+sellingOportunity);
+        await api.CreateOrder(token, currencyData.currency_code, currencyAmount, "sell", sellingOportunity);
+        //console.log("selling order that should be placed: "+currencyData.currency_code+" , qtd: "+currencyAmount+" preco: "+sellingOportunity);
       }
     }
   } catch (error) {
